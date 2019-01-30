@@ -1,0 +1,17 @@
+monolog:
+    handlers:
+        default:
+            type: stream
+            path: "%kernel.logs_dir%/%kernel.environment%.log"
+            level: debug
+            channels: ["!event"]
+        console:
+            type: stream
+            channels: ["console"]
+            path: "%kernel.logs_dir%/command/%kernel.environment%.log"
+            level: debug
+        ServiceLogger:
+            type: stream
+            path: "%kernel.logs_dir%/services/service-%kernel.environment%.log"
+            channels: ["service"]
+            level: info

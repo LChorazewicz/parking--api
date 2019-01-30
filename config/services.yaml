@@ -1,0 +1,62 @@
+parameters:
+    PocztaPolska.Adresy.WSApi: 'http://url/api/'
+
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false       # Allows optimizing the container by removing unused services; this also means
+                            # fetching services directly from the container via $container->get() won't work.
+                            # The best practice is to be explicit about your dependencies anyway.
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{DependencyInjection,Model,Entity,Migrations,Tests,Kernel.php}'
+
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    ignore_tables_listener:
+        class: App\EventListener\IgnorujTabeleListener
+        tags:
+            - {name: doctrine.event_listener, event: postGenerateSchema}
+
+
+    App\Model\Adresy:
+        class: App\Model\Adresy
+        public: true
+
+    App\Model\Daty:
+        class: App\Model\Daty
+        public: true
+
+    App\Controller\AdresyController:
+        arguments: [ "@logger"]
+        tags:
+            - { name: monolog.logger, channel: service }
+
+    App\Command\AppAktualizujBazeCommand:
+        arguments: ['@logger', '@App\Model\Adresy', '%PocztaPolska.Adresy.WSApi%']
+        tags:
+            - { name: 'console.command', command: 'app:aktualizuj-baze' }
+            - { name: monolog.logger, channel: console }
+    App\Controller\SprawdzController:
+        arguments: ['@logger', '@App\Model\Adresy', '@App\Model\Daty']
+        tags:
+            - { name: monolog.logger, channel: console }
+
+    App\Controller\WniosekController:
+        arguments: ['@logger', '@WniosekService']
+        tags:
+            - { name: monolog.logger, channel: console }
+
+    WniosekService:
+        class: App\Model\Wniosek\Wniosek
+        public: true
+        arguments: ['@Psr\Log\LoggerInterface','@App\Repository\WnioskiRepository', '@App\Repository\ZgodyOdpowiedziKlientaRepository',
+            '@App\Repository\KlienciRepository','@App\Repository\KodyDostepoweRepository','@App\Service\SmsService', '@App\Service\SmsService']
+
+    App\Controller\Cron:
+        class: App\Controller\Cron
+        public: true
+        arguments: ['@Psr\Log\LoggerInterface', '@WniosekService', '@App\Repository\KodyDostepoweRepository']
